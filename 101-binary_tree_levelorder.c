@@ -1,128 +1,113 @@
 #include "binary_trees.h"
-/**
- * binary_tree_height - Function that measures the height of a binary tree
- * @tree: tree to go through
- * Return: the height
- */
-size_t binary_tree_height(const binary_tree_t *tree)
-{
-	size_t l = 0;
-	size_t r = 0;
 
-	if (tree == NULL)
+/**
+ * enqueue_item - Adds an item to a queue.
+ * @queue_h: A pointer to the queue's head.
+ * @queue_t: A pointer to the queue's tail.
+ * @n: A pointer to the queue's size value.
+ * @item: The item to add to the queue.
+ */
+void enqueue_item(binary_tree_t **queue_h, binary_tree_t **queue_t,
+	int *n, void *item)
+{
+	binary_tree_t *new_node;
+	binary_tree_t *node = (binary_tree_t *)item;
+
+	if ((queue_h != NULL) && (queue_t != NULL))
 	{
-		return (0);
+		new_node = malloc(sizeof(binary_tree_t));
+		if (new_node == NULL)
+			return;
+		new_node->left = *queue_t;
+		new_node->right = NULL;
+		new_node->n = (node != NULL ? node->n : -1);
+		new_node->parent = node;
+		if (*queue_h == NULL)
+			*queue_h = new_node;
+		if (*queue_t != NULL)
+			(*queue_t)->right = new_node;
+		*queue_t = new_node;
+		if (n != NULL)
+			(*n)++;
 	}
-	else
+}
+
+/**
+ * dequeue_item - Removes an item from a queue.
+ * @queue_h: A pointer to the queue's head.
+ * @queue_t: A pointer to the queue's tail.
+ * @n: A pointer to the queue's size value.
+ *
+ * Return: The value of the removed queue.
+ */
+binary_tree_t *dequeue_item(binary_tree_t **queue_h,
+	binary_tree_t **queue_t, int *n)
+{
+	binary_tree_t *tmp0;
+	binary_tree_t *tmp1;
+	binary_tree_t *node = NULL;
+
+	if ((queue_h != NULL) && (queue_t != NULL))
 	{
-		if (tree)
+		tmp0 = *queue_h;
+		if (tmp0 != NULL)
 		{
-			l = tree->left ? 1 + binary_tree_height(tree->left) : 0;
-			r = tree->right ? 1 + binary_tree_height(tree->right) : 0;
+			node = tmp0->parent;
+			if (tmp0->right != NULL)
+			{
+				tmp1 = tmp0->right;
+				tmp1->left = NULL;
+				*queue_h = tmp1;
+				free(tmp0);
+			}
+			else
+			{
+				free(tmp0);
+				*queue_h = NULL;
+				*queue_t = NULL;
+			}
+			if (n != NULL)
+				(*n)--;
 		}
-		return ((l > r) ? l : r);
 	}
+	return (node);
 }
-/**
- * binary_tree_depth - depth of specified node from root
- * @tree: node to check the depth
- * Return: 0 is it is the root or number of depth
- */
-size_t binary_tree_depth(const binary_tree_t *tree)
-{
-	return ((tree && tree->parent) ? 1 + binary_tree_depth(tree->parent) : 0);
-}
-/**
- * linked_node - this function makes a linked list from depth level and node
- * @head: pointer to head of linked list
- * @tree: node to store
- * @level: depth of node to store
- * Return: Nothing
- */
-void linked_node(link_t **head, const binary_tree_t *tree, size_t level)
-{
-	link_t *new, *aux;
 
-	new = malloc(sizeof(link_t));
-	if (new == NULL)
-	{
-		return;
-	}
-	new->n = level;
-	new->node = tree;
-	if (*head == NULL)
-	{
-		new->next = NULL;
-		*head = new;
-	}
-	else
-	{
-		aux = *head;
-		while (aux->next != NULL)
-		{
-			aux = aux->next;
-		}
-		new->next = NULL;
-		aux->next = new;
-	}
-}
 /**
- * recursion - goes through the complete tree and each stores each node
- * in linked_node function
- * @head: pointer to head of linked list
- * @tree: node to check
- * Return: Nothing by default it affects the pointer
- */
-void recursion(link_t **head, const binary_tree_t *tree)
-{
-	size_t level = 0;
-
-	if (tree != NULL)
-	{
-		level = binary_tree_depth(tree);
-		linked_node(head, tree, level);
-		recursion(head, tree->left);
-		recursion(head, tree->right);
-	}
-}
-/**
- * binary_tree_levelorder - print the nodes element in a lever-order
- * @tree: root node
- * @func: function to use
- * Return: Nothing
+ * binary_tree_levelorder - Performs a level order traversal on a tree.
+ * @tree: The tree to traverse.
+ * @func: The function to handle the traversed node's value.
  */
 void binary_tree_levelorder(const binary_tree_t *tree, void (*func)(int))
 {
-	link_t *head, *aux;
-	size_t height = 0, count = 0;
+	binary_tree_t *queue_head = NULL;
+	binary_tree_t *queue_tail = NULL;
+	int n = 0;
+	binary_tree_t *current = NULL;
 
-	if (!tree || !func)
+	if ((tree != NULL) && (func != NULL))
 	{
-		return;
-	}
-	else
-	{
-		height = binary_tree_height(tree);
-		head = NULL;
-		recursion(&head, tree);
-		while (count <= height)
+		enqueue_item(&queue_head, &queue_tail, &n, (void *)tree);
+		while (n > 0)
 		{
-			aux = head;
-			while (aux != NULL)
+			current = queue_head;
+			if (current->parent != NULL)
 			{
-				if (count == aux->n)
+				func(current->parent->n);
+				if (current->parent->left != NULL)
 				{
-					func(aux->node->n);
+					enqueue_item(
+						&queue_head, &queue_tail, &n, (void *)(current->parent->left)
+					);
 				}
-				aux = aux->next;
+				if (current->parent->right != NULL)
+				{
+					enqueue_item(
+						&queue_head, &queue_tail, &n, (void *)(current->parent->right)
+					);
+				}
 			}
-			count++;
-		}
-		while (head != NULL)
-		{
-			aux = head;
-			head = head->next;
-			free(aux);
+			dequeue_item(&queue_head, &queue_tail, &n);
 		}
 	}
 }
